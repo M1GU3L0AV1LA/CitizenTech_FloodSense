@@ -34,6 +34,7 @@ stateDiagram-v2
     ATENCAO --> NORMAL: nível baixa (histerese + 5 s)
 ```
 
+
 | Estado | Condição de nível | LED | Buzzer |
 |---|---|---|---|
 | NORMAL | < 80 cm | Verde | Mudo |
