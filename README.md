@@ -6,7 +6,7 @@ Projeto feito com **Raspberry Pi Pico**, **MicroPython** e simulação no **Wokw
 
 > Em vez de apenas avisar quando a água passa de um limite, o sistema calcula a **velocidade de subida** do nível e estima **em quantos minutos o canal vai transbordar**, dando tempo para a população reagir.
 
-**Simulação no Wokwi:** _cole aqui o link do projeto_
+**Simulação no Wokwi:** https://wokwi.com/projects/480982534119015425
 ---
 
 ## 1. O problema
