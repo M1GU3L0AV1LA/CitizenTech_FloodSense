@@ -1,8 +1,5 @@
 """
-Alerta de Enchente com Previsão de Transbordamento
-CitizenTech | Raspberry Pi Pico | MicroPython | Wokwi
-
-Ideia: além de medir o nível da água, o sistema calcula a VELOCIDADE de subida
+Alerta de Enchente com Previsão de Transbordamento - medir o nível da água, o sistema calcula a VELOCIDADE de subida
 e estima em quantos minutos o canal vai transbordar, antecipando o alerta.
 
 Entradas : HC-SR04 (nível), potenciômetro (chuva), 2 botões (silenciar / teste)
@@ -12,7 +9,6 @@ from machine import Pin, PWM, ADC, I2C, time_pulse_us
 from utime import ticks_ms, ticks_diff, sleep_ms
 import ssd1306
 
-# ----------------------------- CONFIGURAÇÃO ---------------------------------
 ALTURA_SENSOR_CM = 200      # distância do sensor até o fundo do canal
 NIVEL_TRANSBORDO = 150      # nível (cm) em que a água transborda
 LIMITES = (80, 110, 140)    # ATENÇÃO, ALERTA, EMERGÊNCIA (cm)
@@ -34,7 +30,7 @@ PADROES_BUZZER = {
     EMERGENCIA: (400, 200, 2000),
 }
 
-# ------------------------------- HARDWARE -----------------------------------
+# HARDWARE 
 trig = Pin(3, Pin.OUT)
 echo = Pin(2, Pin.IN)
 chuva_adc = ADC(26)
@@ -48,8 +44,7 @@ btn_silencio = Pin(14, Pin.IN, Pin.PULL_UP)
 i2c = I2C(0, sda=Pin(4), scl=Pin(5), freq=400000)
 oled = ssd1306.SSD1306_I2C(128, 64, i2c)
 
-
-# ------------------------------- LEITURAS -----------------------------------
+# LEITURAS
 def ler_distancia_cm():
     """Distância medida pelo HC-SR04 em cm (None se falhar)."""
     trig.low()
@@ -62,14 +57,11 @@ def ler_distancia_cm():
         return None
     return duracao / 58.0
 
-
 def ler_chuva_mm_h():
     return chuva_adc.read_u16() * CHUVA_MAX_MM_H / 65535
 
-
-# --------------------------- TENDÊNCIA E PREVISÃO ---------------------------
+# TENDÊNCIA E PREVISÃO 
 historico = []  # lista de (tempo_ms, nivel_cm)
-
 
 def registrar(nivel, agora):
     historico.append((agora, nivel))
@@ -94,22 +86,19 @@ def taxa_cm_min():
         return 0.0
     return (media_movel([n for _, n in fim]) - media_movel([n for _, n in ini])) / dt_min
 
-
 def tempo_ate_transbordar(nivel, taxa):
     """Minutos até o transbordo (None se estável/descendo)."""
     if taxa <= 0.2:
         return None
     return max(0.0, (NIVEL_TRANSBORDO - nivel) / taxa)
 
-
-# ----------------------------- MÁQUINA DE ESTADOS ---------------------------
+# MÁQUINA DE ESTADOS 
 def estado_por_nivel(nivel):
     estado = NORMAL
     for i, lim in enumerate(LIMITES):
         if nivel >= lim:
             estado = i + 1
     return estado
-
 
 def estado_por_antecipacao(eta, chuva, taxa):
     """Sobe o estado ANTES de o nível chegar ao limite."""
@@ -125,10 +114,8 @@ def estado_por_antecipacao(eta, chuva, taxa):
             estado = max(estado, EMERGENCIA)
     return estado
 
-
 estado = NORMAL
 descendo_desde = None
-
 
 def atualizar_estado(nivel, eta, chuva, taxa, agora):
     """Sobe na hora; desce só com histerese + tempo de espera."""
@@ -149,11 +136,9 @@ def atualizar_estado(nivel, eta, chuva, taxa, agora):
     else:
         descendo_desde = None
 
-
-# --------------------------------- SAÍDAS -----------------------------------
+# SAÍDAS
 silencio_ate = 0
 teste_ate = 0
-
 
 def atualizar_leds(agora):
     if teste_ate and ticks_diff(teste_ate, agora) > 0:
@@ -167,7 +152,6 @@ def atualizar_leds(agora):
         led_vermelho.value((agora // 200) % 2)  # pisca
     else:
         led_vermelho.value(estado == ALERTA)
-
 
 def atualizar_buzzer(agora):
     em_teste = teste_ate and ticks_diff(teste_ate, agora) > 0
@@ -186,7 +170,6 @@ def atualizar_buzzer(agora):
     else:
         buzzer.duty_u16(0)
 
-
 def atualizar_display(nivel, chuva, taxa, eta, mudo):
     oled.fill(0)
     oled.text("NIVEL:%4d cm" % nivel, 0, 0)
@@ -196,16 +179,13 @@ def atualizar_display(nivel, chuva, taxa, eta, mudo):
     oled.text(NOMES[estado] + (" (MUDO)" if mudo else ""), 0, 52)
     oled.show()
 
-
 def tela_erro():
     oled.fill(0)
     oled.text("FALHA NO SENSOR", 0, 28)
     oled.show()
 
-
-# ------------------------------------ BOTÕES ---------------------------------
+# BOTÕES
 ultimo_btn = 0
-
 
 def tratar_botoes(agora):
     """Leitura sem bloqueio, com debounce de 250 ms."""
@@ -219,9 +199,8 @@ def tratar_botoes(agora):
         teste_ate = agora + DURACAO_TESTE_MS
         ultimo_btn = agora
 
-
-# ------------------------------------ LOOP -----------------------------------
-ultima_leitura = ticks_ms()
+# LOOP
+ultima_leitura = ticks_ms()     
 nivel = 0
 chuva = 0
 taxa = 0.0
