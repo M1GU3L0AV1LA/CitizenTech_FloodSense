@@ -1,16 +1,18 @@
-"""
-Alerta de Enchente com Previsão de Transbordamento - medir o nível da água, o sistema calcula a VELOCIDADE de subida
+""" Alerta de Enchente com Previsão de Transbordamento
+
+FAz a medição do nível da água, o sistema calcula a VELOCIDADE de subida
 e estima em quantos minutos o canal vai transbordar, antecipando o alerta.
 
 Entradas : HC-SR04 (nível), potenciômetro (chuva), 2 botões (silenciar / teste)
-Saídas   : 3 LEDs, buzzer (padrões por estado), display OLED SSD1306
-"""
+Saídas   : 3 LEDs, buzzer (padrões por estado), display OLED SSD1306 """
+
 from machine import Pin, PWM, ADC, I2C, time_pulse_us
 from utime import ticks_ms, ticks_diff, sleep_ms
 import ssd1306
 
-ALTURA_SENSOR_CM = 200      # distância do sensor até o fundo do canal
-NIVEL_TRANSBORDO = 150      # nível (cm) em que a água transborda
+#CONFIGURAÇÃO
+ALTURA_SENSOR_CM = 200      # distância sensor até fundo do canal
+NIVEL_TRANSBORDO = 150      # nível (cm) água transborda
 LIMITES = (80, 110, 140)    # ATENÇÃO, ALERTA, EMERGÊNCIA (cm)
 HISTERESE_CM = 5            # folga para descer de estado
 TEMPO_DESCIDA_MS = 5000     # tempo mínimo abaixo do limite para descer
@@ -30,7 +32,7 @@ PADROES_BUZZER = {
     EMERGENCIA: (400, 200, 2000),
 }
 
-# HARDWARE 
+# HARDWARE
 trig = Pin(3, Pin.OUT)
 echo = Pin(2, Pin.IN)
 chuva_adc = ADC(26)
@@ -45,8 +47,7 @@ i2c = I2C(0, sda=Pin(4), scl=Pin(5), freq=400000)
 oled = ssd1306.SSD1306_I2C(128, 64, i2c)
 
 # LEITURAS
-def ler_distancia_cm():
-    """Distância medida pelo HC-SR04 em cm (None se falhar)."""
+def ler_distancia_cm():     """Distância medida pelo HC-SR04(cm)."""
     trig.low()
     sleep_ms(2)
     trig.high()
@@ -60,7 +61,7 @@ def ler_distancia_cm():
 def ler_chuva_mm_h():
     return chuva_adc.read_u16() * CHUVA_MAX_MM_H / 65535
 
-# TENDÊNCIA E PREVISÃO 
+# TENDÊNCIA E PREVISÃO
 historico = []  # lista de (tempo_ms, nivel_cm)
 
 def registrar(nivel, agora):
@@ -68,14 +69,10 @@ def registrar(nivel, agora):
     if len(historico) > JANELA_AMOSTRAS:
         historico.pop(0)
 
-
 def media_movel(valores):
     return sum(valores) / len(valores)
 
-
-def taxa_cm_min():
-    """Velocidade de subida (cm/min): média da 2ª metade da janela
-    menos média da 1ª metade, dividido pelo tempo entre elas."""
+def taxa_cm_min():                         """Velocidade de subida (cm/min): média da 2ª metade da janela menos média da 1ª metade, dividido pelo tempo entre elas."""
     if len(historico) < JANELA_AMOSTRAS:
         return 0.0
     meio = JANELA_AMOSTRAS // 2
@@ -92,7 +89,7 @@ def tempo_ate_transbordar(nivel, taxa):
         return None
     return max(0.0, (NIVEL_TRANSBORDO - nivel) / taxa)
 
-# MÁQUINA DE ESTADOS 
+# MÁQUINA DE ESTADOS
 def estado_por_nivel(nivel):
     estado = NORMAL
     for i, lim in enumerate(LIMITES):
@@ -100,8 +97,7 @@ def estado_por_nivel(nivel):
             estado = i + 1
     return estado
 
-def estado_por_antecipacao(eta, chuva, taxa):
-    """Sobe o estado ANTES de o nível chegar ao limite."""
+def estado_por_antecipacao(eta, chuva, taxa):   """Sobe o estado ANTES de o nível chegar ao limite."""
     estado = NORMAL
     if chuva >= 40 and taxa > 0.5:
         estado = ATENCAO
@@ -117,8 +113,7 @@ def estado_por_antecipacao(eta, chuva, taxa):
 estado = NORMAL
 descendo_desde = None
 
-def atualizar_estado(nivel, eta, chuva, taxa, agora):
-    """Sobe na hora; desce só com histerese + tempo de espera."""
+def atualizar_estado(nivel, eta, chuva, taxa, agora):       """Sobe na hora; desce só com histerese + tempo de espera."""
     global estado, descendo_desde
     antecip = estado_por_antecipacao(eta, chuva, taxa)
     bruto = max(estado_por_nivel(nivel), antecip)
@@ -136,7 +131,7 @@ def atualizar_estado(nivel, eta, chuva, taxa, agora):
     else:
         descendo_desde = None
 
-# SAÍDAS
+# SAÍDAS 
 silencio_ate = 0
 teste_ate = 0
 
@@ -149,7 +144,7 @@ def atualizar_leds(agora):
     led_verde.value(estado == NORMAL)
     led_amarelo.value(estado == ATENCAO)
     if estado == EMERGENCIA:
-        led_vermelho.value((agora // 200) % 2)  # pisca
+        led_vermelho.value((agora // 200) % 2)  
     else:
         led_vermelho.value(estado == ALERTA)
 
@@ -184,7 +179,7 @@ def tela_erro():
     oled.text("FALHA NO SENSOR", 0, 28)
     oled.show()
 
-# BOTÕES
+# BOTÕES 
 ultimo_btn = 0
 
 def tratar_botoes(agora):
@@ -199,8 +194,8 @@ def tratar_botoes(agora):
         teste_ate = agora + DURACAO_TESTE_MS
         ultimo_btn = agora
 
-# LOOP
-ultima_leitura = ticks_ms()     
+# LOOP 
+ultima_leitura = ticks_ms()
 nivel = 0
 chuva = 0
 taxa = 0.0
